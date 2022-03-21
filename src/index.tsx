@@ -1,25 +1,37 @@
 import * as esbuild from 'esbuild-wasm'
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
+import { unpkgPathPlugin } from './plugins/unpkg-path-plugin';
 
 const App = () => {
+  const ref = useRef<any>()
   const [input, setInput] = useState('');
   const [code, setCode] = useState('');
 
   const startService = async () => {
-    const service = await esbuild.startService({
+    ref.current = await esbuild.startService({
       worker: true,
       wasmURL: '/esbuild.wasm'
     })
-    console.log(service);
   }
-  const onClick = () => {
-    console.log(input);
-  };
 
   useEffect(() => {
     startService();
   }, [])
+  
+  const onClick = async () => {
+    if (!ref.current) return;
+    const result = await ref.current.build({
+      entryPoints: ['index.js'],
+      bundle: true,
+      write: false,
+      plugins: [unpkgPathPlugin()]
+    });
+
+    console.log(result.outputFiles[0].text);
+    setCode(result.outputFiles[0].text);
+  };
+
 
   return <div>
     <textarea onChange={e => setInput(e.target.value)}></textarea>
